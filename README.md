@@ -15,6 +15,7 @@ Currently, this is just a placeholder until I can make it work. Behold, the wave
 - [ ] Shamelessly copy the user interface of OpenAI chat and Hugging Face chat. Sorry I'm not a designer so don't sue me for copying the UI from the other chat models.
 - [ ] Let users choose models they want to use and download it automatically.
 - [ ] Choice of installation directory and model directory.
+- [ ] Option to use [hugging-chat-api](https://github.com/Soulter/hugging-chat-api) instead of running models locally? Am I going to abuse their servers?!?
 - [x] Be really lazy and summon Llamas to work for me by utilizing Raycast.
 
 ## Goals:
