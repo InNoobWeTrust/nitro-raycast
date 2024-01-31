@@ -8,6 +8,8 @@ This is a shameless wrapper around [Nitro](https://github.com/janhq/nitro), to a
 
 Currently, this is just a placeholder until I can make it work. Behold, the wave of Llamas is coming to you soon!
 
+Reference for logical flow: [raycast/extensions | Add speedtest #302](https://github.com/raycast/extensions/pull/302)
+
 ## TODO:
 
 - [ ] Using `@janhq/nitro-node` when it is published on NPM instead of using git submodules from a forked repository. See: [janhq/jan#1635](https://github.com/janhq/jan/issues/1635)
