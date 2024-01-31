@@ -1,0 +1,39 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "nitro-raycast",
+  "title": "nitro-raycast",
+  "description": "Nitro raycast extension. Using LLM right from Raycast",
+  "icon": "command-icon.png",
+  "author": "InNoobWeTrust",
+  "categories": [
+    "Productivity"
+  ],
+  "license": "WTFPL",
+  "commands": [
+    {
+      "name": "index",
+      "title": "Nitro",
+      "subtitle": "Local LLM on Raycast!",
+      "description": "Using nitro, an open-sourced alternative to OpenAI that runs on you local machine.",
+      "mode": "view"
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.66.2"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.6",
+    "@types/node": "20.8.10",
+    "@types/react": "18.2.27",
+    "eslint": "^8.51.0",
+    "prettier": "^3.0.3",
+    "typescript": "^5.2.2"
+  },
+  "scripts": {
+    "build": "ray build -e dist",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "publish": "npx @raycast/api@latest publish"
+  }
+}
