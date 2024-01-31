@@ -13,3 +13,6 @@ compiled_raycast_swift
 
 # misc
 .DS_Store
+
+# test assets
+test/test_assets/*.gguf
