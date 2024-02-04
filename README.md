@@ -2,6 +2,8 @@
 
 [![stability-wip](https://img.shields.io/badge/stability-wip-lightgrey.svg)](https://github.com/mkenney/software-guides/blob/master/STABILITY-BADGES.md#work-in-progress)
 
+![POC screenshot](docs/static/img/nitro-raycast-2024-02-04.png)
+
 Nitro raycast extension. Using LLM right from Raycast.
 
 This is a shameless wrapper around [Nitro](https://github.com/janhq/nitro), to allow easy use in [Raycast](https://www.raycast.com/).
