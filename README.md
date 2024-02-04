@@ -14,7 +14,7 @@ Reference for logical flow: [raycast/extensions | Add speedtest #302](https://gi
 
 ## TODO:
 
-- [ ] Using `@janhq/nitro-node` when it is published on NPM instead of using git submodules from a forked repository. See: [janhq/jan#1635](https://github.com/janhq/jan/issues/1635)
+- [ ] Using `@janhq/nitro-node` when it is published on NPM instead of hacking around the installation hooks. See: [janhq/jan#1635](https://github.com/janhq/jan/issues/1635)
 - [ ] Auto check and update latest release of `nitro` or let user choose the version they want to use.
 - [ ] Shamelessly copy the user interface of OpenAI chat and Hugging Face chat. Sorry I'm not a designer so don't sue me for copying the UI from the other chat models.
 - [ ] Let users choose models they want to use and download it automatically.
