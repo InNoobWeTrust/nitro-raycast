@@ -7,7 +7,7 @@ import path from "node:path";
 import { Duplex } from "node:stream";
 import { WritableStream } from "node:stream/web";
 import download from "download";
-import { loadLLMModel, runModel, validateModelStatus, stopModel, chatCompletion } from "@janhq/nitro-node";
+import { initialize, loadLLMModel, runModel, validateModelStatus, stopModel, chatCompletion } from "@janhq/nitro-node";
 
 import * as modelCfg from "./test_assets/model.json";
 
@@ -72,19 +72,19 @@ const sleep = async (ms: number): Promise<NodeJS.Timeout> => Promise.resolve().t
  */
 describe("Manage nitro process", () => {
   /// BEGIN SUITE CONFIG
-  const modelFullPath = fs.mkdtempSync(path.join(os.tmpdir(), "nitro-node-test"));
+  const modelPath = fs.mkdtempSync(path.join(os.tmpdir(), "nitro-node-test"));
 
   // Setup steps before running the suite
   const setupHooks = [
     // Download model before starting tests
-    downloadModelHook(modelFullPath),
+    downloadModelHook(modelPath),
   ];
   // Teardown steps after running the suite
   const teardownHooks = [
     // Stop nitro after running, regardless of error or not
     () => stopModel(),
     // On teardown, cleanup tmp directory that was created earlier
-    cleanupTargetDirHook(modelFullPath),
+    cleanupTargetDirHook(modelPath),
   ];
   /// END SUITE CONFIG
 
@@ -107,16 +107,18 @@ describe("Manage nitro process", () => {
   test(
     "chat completion",
     async () => {
+      // Initialize nitro
+      await initialize();
       // Start nitro
       await runModel({
-        modelFullPath,
+        modelPath,
         promptTemplate: modelCfg.settings.prompt_template,
       });
       // Wait 5s for nitro to start
       await sleep(5 * 1000);
       // Load LLM model
       await loadLLMModel({
-        llama_model_path: modelFullPath,
+        llama_model_path: modelPath,
         ctx_len: modelCfg.settings.ctx_len,
         ngl: modelCfg.settings.ngl,
         embedding: false,

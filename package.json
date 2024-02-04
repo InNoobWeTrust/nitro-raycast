@@ -20,7 +20,9 @@
   ],
   "dependencies": {
     "@raycast/api": "^1.66.2",
-    "download": "^8.0.0"
+    "download": "^8.0.0",
+    "electron": "^28.2.1",
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@raycast/eslint-config": "^1.0.6",
@@ -37,7 +39,7 @@
     "typescript": "^5.2.2"
   },
   "scripts": {
-    "install": "download --extract --strip 1 --out node_modules/@janhq/nitro-node https://gitpkg.now.sh/InNoobWeTrust/nitro/nitro-node?7b2c84644cc286a2b257135c1defa203fdbcebd2",
+    "install": "download --extract --strip 1 --out node_modules/@janhq/nitro-node https://gitpkg.now.sh/InNoobWeTrust/nitro/nitro-node?b6727a0aa9e126323d6ecce614a00bd1f7f738e1",
     "postinstall": "cd node_modules/@janhq/nitro-node && env -i HOME=\"$HOME\" $SHELL -l -c \"npm i && npm run build\"",
     "test": "jest --verbose --detectOpenHandles",
     "build": "ray build -e dist",
@@ -49,5 +51,6 @@
   "files": [
     "dist",
     "node_modules/@janhq/nitro-node"
-  ]
+  ],
+  "version": "0.0.1"
 }
