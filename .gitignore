@@ -16,3 +16,5 @@ compiled_raycast_swift
 
 # test assets
 test/test_assets/*.gguf
+# Build output
+dist
