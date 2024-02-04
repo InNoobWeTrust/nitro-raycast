@@ -8,7 +8,7 @@
   "categories": [
     "Productivity"
   ],
-  "license": "WTFPL",
+  "license": "MIT",
   "commands": [
     {
       "name": "index",
@@ -19,21 +19,38 @@
     }
   ],
   "dependencies": {
-    "@raycast/api": "^1.66.2"
+    "@raycast/api": "^1.66.2",
+    "download": "^8.0.0",
+    "electron": "^28.2.1",
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@raycast/eslint-config": "^1.0.6",
+    "@types/download": "^8.0.5",
+    "@types/jest": "^29.5.11",
     "@types/node": "20.8.10",
     "@types/react": "18.2.27",
+    "download-cli": "^1.1.1",
     "eslint": "^8.51.0",
+    "jest": "^29.7.0",
     "prettier": "^3.0.3",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
     "typescript": "^5.2.2"
   },
   "scripts": {
+    "install": "download --extract --strip 1 --out node_modules/@janhq/nitro-node https://gitpkg.now.sh/InNoobWeTrust/nitro/nitro-node?b6727a0aa9e126323d6ecce614a00bd1f7f738e1",
+    "postinstall": "cd node_modules/@janhq/nitro-node && env -i HOME=\"$HOME\" $SHELL -l -c \"npm i && npm run build\"",
+    "test": "jest --verbose --detectOpenHandles",
     "build": "ray build -e dist",
     "dev": "ray develop",
     "fix-lint": "ray lint --fix",
     "lint": "ray lint",
     "publish": "npx @raycast/api@latest publish"
-  }
+  },
+  "files": [
+    "dist",
+    "node_modules/@janhq/nitro-node"
+  ],
+  "version": "0.0.1"
 }

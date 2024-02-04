@@ -3,6 +3,7 @@
 # dependencies
 /node_modules
 package-lock.json
+yarn.lock
 
 # Raycast specific files
 raycast-env.d.ts
@@ -12,3 +13,6 @@ compiled_raycast_swift
 
 # misc
 .DS_Store
+
+# test assets
+test/test_assets/*.gguf
