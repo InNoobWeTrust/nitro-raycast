@@ -1,40 +1,55 @@
-import { ActionPanel, List, Action, Form } from "@raycast/api";
-import { useNitro } from "./nitro";
+import { ActionPanel, List, Action, Form, useNavigation, Detail } from "@raycast/api";
+import { chatStore, useNitro } from "./nitro";
 import { useEffect, useState } from "react";
 
 export default function Command() {
-  const { isLoading, chats, addChat } = useNitro();
+  const { pop } = useNavigation();
   const [markdown, setMarkdown] = useState("");
+  useNitro();
 
   useEffect(() => {
-    setMarkdown(chats.join("\n---\n"));
-  }, [chats]);
+    chatStore.subject.subscribe({
+      next: (chats) => {
+        if (!chats.length) {
+          setMarkdown(`# <Empty chat>`);
+          return;
+        }
+        setMarkdown(
+          chats.map((section) => ((section.role === "user" && "# ") || "") + section.content).join("\n\n---\n\n"),
+        );
+      },
+    });
+  }, []);
 
   return (
-    <List isShowingDetail>
-      <List.Item
-        icon="list-icon.png"
-        title="Chat"
-        detail={<List.Item.Detail isLoading={isLoading} markdown={markdown} />}
-        actions={
-          <ActionPanel>
-            <Action.Push
-              title="Add Chat"
-              target={
-                <Form
-                  actions={
-                    <ActionPanel>
-                      <Action.SubmitForm title="Submit" onSubmit={(values) => addChat(values.msg)} />
-                    </ActionPanel>
-                  }
-                >
-                  <Form.TextArea id="msg" />
-                </Form>
-              }
-            />
-          </ActionPanel>
-        }
-      />
-    </List>
+    <Detail
+      isLoading={chatStore.status.busy.getValue()}
+      markdown={markdown}
+      actions={
+        <ActionPanel>
+          <Action.Push
+            title="Add Chat"
+            target={
+              <Form
+                actions={
+                  <ActionPanel>
+                    <Action.SubmitForm
+                      title="Submit"
+                      onSubmit={(values) => {
+                        chatStore.requestCompletion(values.msg);
+                        pop();
+                      }}
+                    />
+                  </ActionPanel>
+                }
+              >
+                <Form.TextArea id="msg" />
+              </Form>
+            }
+          />
+          <Action title="Reset Conversation" onAction={() => chatStore.reset()} />
+        </ActionPanel>
+      }
+    />
   );
 }

@@ -39,10 +39,10 @@
     "typescript": "^5.2.2"
   },
   "scripts": {
-    "install": "download --extract --strip 1 --out node_modules/@janhq/nitro-node https://gitpkg.now.sh/InNoobWeTrust/nitro/nitro-node?b6727a0aa9e126323d6ecce614a00bd1f7f738e1",
+    "install": "download --extract --strip 1 --out node_modules/@janhq/nitro-node https://gitpkg.now.sh/InNoobWeTrust/nitro/nitro-node?142a60dab94bc2a4b0aa082dba895e3372581b7c",
     "postinstall": "cd node_modules/@janhq/nitro-node && env -i HOME=\"$HOME\" $SHELL -l -c \"npm i && npm run build\"",
     "test": "jest --verbose --detectOpenHandles",
-    "build": "ray build -e dist",
+    "build": "ray build -e dist -o dist",
     "dev": "ray develop",
     "fix-lint": "ray lint --fix",
     "lint": "ray lint",
