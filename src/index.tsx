@@ -17,7 +17,7 @@ export default function Command() {
           return;
         }
         setMarkdown(
-          chats.map((section) => ((section.role === "user" && "# ") || "") + section.content).join("\n\n---\n\n"),
+          chats.map((section) => (section.role === "user" ? "# 🧑 " : "# 🤖 ") + section.content).join("\n\n---\n\n"),
         );
       },
     });
