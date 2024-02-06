@@ -1,32 +1,38 @@
 import { LocalStorage, environment } from "@raycast/api";
-import { useEffect } from "react";
 import path from "node:path";
 import fs from "node:fs/promises";
 import os from "node:os";
 import { BehaviorSubject, Subscription } from "rxjs";
 
-import { initialize, setBinPath, runModel, killSubprocess, chatCompletion } from "@janhq/nitro-node";
+import {
+  initialize,
+  setBinPath,
+  runModel,
+  killSubprocess,
+  chatCompletion,
+  NitroModelInitOptions,
+} from "@janhq/nitro-node";
+import { useEffect } from "react";
 
 const CHAT_STORAGE_KEY = "chat-history";
 const CONFIG_STORAGE_KEY = "nitro-config";
 const BIN_PATH = path.join(environment.supportPath, "bin");
 
-interface Store<T> {
+interface Store<T> extends AsyncDisposable {
   subject: BehaviorSubject<T>;
   status: Record<string, BehaviorSubject<boolean>>;
   selfSubscription: Record<string, Subscription>;
   init: () => Promise<void>;
-  dispose?: () => Promise<void>;
 }
 const disposerFactory =
   <T>(store: Store<T>) =>
-    async () => {
-      for await (const sub of Object.values(store.selfSubscription)) {
-        sub.unsubscribe();
-      }
-    };
+  async () => {
+    for await (const sub of Object.values(store.selfSubscription)) {
+      sub.unsubscribe();
+    }
+  };
 
-interface NitroConfig {
+interface NitroChatConfig {
   model: string;
   max_tokens: number;
   stop: string[];
@@ -37,10 +43,10 @@ interface NitroConfig {
   context_length: number;
 }
 
-export const configStore: Store<NitroConfig> & {
-  setConfig: (newConfig: Partial<NitroConfig>) => void;
+const chatConfigStore: Store<NitroChatConfig> & {
+  setConfig: (newConfig: Partial<NitroChatConfig>) => void;
 } = {
-  subject: new BehaviorSubject<NitroConfig>({
+  subject: new BehaviorSubject<NitroChatConfig>({
     model: "gpt-3.5-turbo",
     max_tokens: 2048,
     stop: [],
@@ -59,21 +65,22 @@ export const configStore: Store<NitroConfig> & {
   init: async () => {
     // Load config
     const configRaw = await LocalStorage.getItem<string>(CONFIG_STORAGE_KEY);
-    if (configRaw) configStore.subject.next(JSON.parse(configRaw));
+    if (configRaw) chatConfigStore.subject.next(JSON.parse(configRaw));
     // Subscribe to changes in runtime config and save to local storage
-    configStore.selfSubscription.autoSave = configStore.subject.subscribe({
+    chatConfigStore.selfSubscription.autoSave = chatConfigStore.subject.subscribe({
       next: (config) => {
         LocalStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
       },
     });
     // Set status ready
-    configStore.status.ready.next(true);
-    // Set disposer
-    configStore.dispose = disposerFactory(configStore);
+    chatConfigStore.status.ready.next(true);
   },
-  setConfig: (newConfig: Partial<NitroConfig>) => {
-    configStore.subject.next({
-      ...configStore.subject.getValue(),
+  [Symbol.asyncDispose]: async () => {
+    await disposerFactory(chatConfigStore)();
+  },
+  setConfig: (newConfig: Partial<NitroChatConfig>) => {
+    chatConfigStore.subject.next({
+      ...chatConfigStore.subject.getValue(),
       ...newConfig,
     });
   },
@@ -83,7 +90,8 @@ type Chat = {
   role: "assistant" | "user";
   content: string;
 }[];
-export const chatStore: Store<Chat> & {
+const chatHistoryStore: Store<Chat> & {
+  systemPrompt: { role: "assistant"; content: string };
   reset: () => void;
   requestCompletion: (msg: string) => Promise<void>;
 } = {
@@ -95,101 +103,112 @@ export const chatStore: Store<Chat> & {
   selfSubscription: {
     autoSave: new Subscription(),
   },
+  systemPrompt: {
+    content:
+      "You are a good productivity assistant. You help user with what they are asking in Markdown format . For responses that contain code, you must use ``` with the appropriate coding language to help display the code to user correctly.",
+    role: "assistant",
+  },
   init: async () => {
     // Init chat history from previous session
     const storedChatJson = await LocalStorage.getItem<string>(CHAT_STORAGE_KEY);
-    const initialChat = storedChatJson
-      ? JSON.parse(storedChatJson)
-      : [
-        {
-          content:
-            "You are a good productivity assistant. You help user with what they are asking in Markdown format . For responses that contain code, you must use ``` with the appropriate coding language to help display the code to user correctly.",
-          role: "assistent",
-        },
-      ];
-    chatStore.subject.next(initialChat);
+    const initialChat = storedChatJson ? JSON.parse(storedChatJson) : [chatHistoryStore.systemPrompt];
+    chatHistoryStore.subject.next(initialChat);
     // Store chat history on change
-    chatStore.selfSubscription.autoSave = chatStore.subject.subscribe({
+    chatHistoryStore.selfSubscription.autoSave = chatHistoryStore.subject.subscribe({
       next: (chats) => {
         LocalStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chats));
       },
     });
     // After init, set ready status
-    chatStore.status.ready.next(true);
-    // Set disposer
-    chatStore.dispose = disposerFactory(chatStore);
+    chatHistoryStore.status.ready.next(true);
+  },
+  [Symbol.asyncDispose]: async () => {
+    await disposerFactory(chatHistoryStore)();
   },
   reset: () => {
-    chatStore.subject.next([]);
+    chatHistoryStore.subject.next([chatHistoryStore.systemPrompt]);
   },
   requestCompletion: async (msg: string) => {
-    chatStore.status.busy.next(true);
-    chatStore.subject.next([
-      ...chatStore.subject.getValue(),
+    chatHistoryStore.status.busy.next(true);
+    chatHistoryStore.subject.next([
+      ...chatHistoryStore.subject.getValue(),
       {
         content: msg,
         role: "user",
       },
     ]);
     const response = await chatCompletion({
-      ...configStore.subject.getValue(),
-      messages: chatStore.subject.getValue(),
+      ...chatConfigStore.subject.getValue(),
+      messages: chatHistoryStore.subject.getValue(),
     });
     const reply = (await response.json()) as { choices: { message: { content: string } }[] };
     console.log(JSON.stringify(reply.choices[0]?.message?.content));
-    chatStore.subject.next([
-      ...chatStore.subject.getValue(),
+    chatHistoryStore.subject.next([
+      ...chatHistoryStore.subject.getValue(),
       {
         content: reply.choices[0]?.message?.content || "Error",
         role: "assistant",
       },
     ]);
-    chatStore.status.busy.next(false);
+    chatHistoryStore.status.busy.next(false);
   },
 };
 
-interface ModelConfig {
-  modelPath: string;
-  promptTemplate: string;
-}
-
-export const nitroManager: Store<ModelConfig> = {
-  subject: new BehaviorSubject<ModelConfig>({
+const nitroManager: Store<NitroModelInitOptions> = {
+  subject: new BehaviorSubject<NitroModelInitOptions>({
     modelPath: path.join(os.homedir(), "jan", "models", "tinyllama-1.1b"),
     promptTemplate: "<|system|>\n{system_message}<|user|>\n{prompt}<|assistant|>",
+    ctx_len: 50,
+    ngl: 32,
+    cont_batching: false,
+    embedding: false,
+    cpu_threads: -1,
   }),
   status: {
     ready: new BehaviorSubject<boolean>(false),
   },
   selfSubscription: {
+    autoSave: new Subscription(),
     autorestart: new Subscription(),
   },
   init: async () => {
-    await configStore.init();
-    await chatStore.init();
+    // Init chat storage first to display history
+    await chatConfigStore.init();
+    await chatHistoryStore.init();
     await fs.mkdir(BIN_PATH, { recursive: true });
     await initialize();
     await setBinPath(path.join(environment.supportPath, "bin"));
     await runModel(nitroManager.subject.getValue());
-    // After nitro is ran, init chat storage
     // Set run status
     nitroManager.status.ready.next(true);
     // Monitor nitro and restart if it's not running anymore
+    nitroManager.selfSubscription.autorestart = nitroManager.status.ready.subscribe({
+      next: async (ready) => {
+        if (!ready) {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          runModel(nitroManager.subject.getValue());
+        }
+      },
+    });
   },
-  dispose: async () => {
-    await configStore.dispose!();
-    await chatStore.dispose!();
-    await killSubprocess();
-    // Set statuses
+  [Symbol.asyncDispose]: async () => {
+    // Dispose all subscriptions
+    await disposerFactory(nitroManager)();
+    // Set statuses for UI display (if there is any)
     nitroManager.status.ready.next(false);
+    await chatConfigStore[Symbol.asyncDispose]();
+    await chatHistoryStore[Symbol.asyncDispose]();
+    await killSubprocess();
   },
 };
 
-export const useNitro = () => {
+const useNitro = () => {
   useEffect(() => {
     nitroManager.init();
     return () => {
-      nitroManager.dispose!();
+      nitroManager[Symbol.asyncDispose]();
     };
   }, []);
 };
+
+export { chatConfigStore, chatHistoryStore, nitroManager, useNitro };

@@ -1,5 +1,5 @@
-import { ActionPanel, List, Action, Form, useNavigation, Detail } from "@raycast/api";
-import { chatStore, useNitro } from "./nitro";
+import { ActionPanel, Action, Form, useNavigation, Detail } from "@raycast/api";
+import { chatHistoryStore, useNitro } from "./nitro";
 import { useEffect, useState } from "react";
 
 export default function Command() {
@@ -8,8 +8,10 @@ export default function Command() {
   useNitro();
 
   useEffect(() => {
-    chatStore.subject.subscribe({
+    chatHistoryStore.subject.subscribe({
       next: (chats) => {
+        // Skip system prompt
+        chats = chats.slice(1);
         if (!chats.length) {
           setMarkdown(`# <Empty chat>`);
           return;
@@ -23,7 +25,7 @@ export default function Command() {
 
   return (
     <Detail
-      isLoading={chatStore.status.busy.getValue()}
+      isLoading={chatHistoryStore.status.busy.getValue()}
       markdown={markdown}
       actions={
         <ActionPanel>
@@ -36,7 +38,7 @@ export default function Command() {
                     <Action.SubmitForm
                       title="Submit"
                       onSubmit={(values) => {
-                        chatStore.requestCompletion(values.msg);
+                        chatHistoryStore.requestCompletion(values.msg);
                         pop();
                       }}
                     />
@@ -47,7 +49,7 @@ export default function Command() {
               </Form>
             }
           />
-          <Action title="Reset Conversation" onAction={() => chatStore.reset()} />
+          <Action title="Reset Conversation" onAction={() => chatHistoryStore.reset()} />
         </ActionPanel>
       }
     />
