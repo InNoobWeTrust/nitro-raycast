@@ -1,7 +1,8 @@
-import { ActionPanel, Action, Form, useNavigation, Detail, showToast } from "@raycast/api";
+import { ActionPanel, Action, Form, useNavigation, Detail, showToast, confirmAlert } from "@raycast/api";
 import { chatConfigStore, chatHistoryStore, nitroManager, useNitro } from "./nitro";
 import { useEffect, useState } from "react";
 import { killNitroProcess, useUserInfo, userInfoStore } from "./utils";
+import { combineLatest, shareReplay } from "rxjs";
 
 export default function Command() {
   const { pop } = useNavigation();
@@ -11,17 +12,21 @@ export default function Command() {
   const { busy } = useNitro();
   useUserInfo();
 
-  // Register observers
+  // Register observers, one hook to rule them all!
   useEffect(() => {
     // FIXME: Force kill nitro, as reloading with dev mode will make us lose track of the pid
     killNitroProcess();
 
     const subscriptions = [
-      chatHistoryStore.subject.subscribe((chats) => {
+      combineLatest([
+        userInfoStore.subject.pipe(shareReplay(1)),
+        chatConfigStore.subject.pipe(shareReplay(1)),
+        chatHistoryStore.subject.pipe(shareReplay(1)),
+      ]).subscribe(([userInfo, chatConfig, chats]) => {
         // Skip system prompt
         chats = chats.slice(1);
         if (!chats.length) {
-          setMarkdown(`# <Empty chat>`);
+          setMarkdown(`# Empty chat`);
           return;
         }
         setMarkdown(
@@ -29,8 +34,8 @@ export default function Command() {
             .map(
               (section) =>
                 (section.role === "user"
-                  ? `# 🧑 [${userInfoStore.subject.getValue().name}]\n`
-                  : `# 🤖 [${chatConfigStore.subject.getValue().model || "Generic LLM"}]\n`) + section.content,
+                  ? `# 🧑 [${userInfo.name}]\n`
+                  : `# 🤖 [${chatConfig.model || "Generic LLM"}]\n`) + section.content,
             )
             .join("\n\n---\n\n"),
         );
@@ -57,10 +62,20 @@ export default function Command() {
                   <ActionPanel>
                     <Action.SubmitForm
                       title="Submit"
-                      onSubmit={(values) => {
+                      onSubmit={async (values) => {
+                        if (!values.msg.trim().length) {
+                          showToast({
+                            title: "Please type something before submitting",
+                          });
+                          return;
+                        }
                         try {
-                          chatHistoryStore.requestCompletion(values.msg);
-                          pop();
+                          // Request completion
+                          const promise = chatHistoryStore.requestCompletion(values.msg);
+                          // Delay return to avoid button debounce triggering other actions on the main screen
+                          setTimeout(pop, 500);
+                          // Wait for chat completion
+                          await promise;
                         } catch (e) {
                           showToast({ title: JSON.stringify(e) });
                         }
@@ -73,8 +88,30 @@ export default function Command() {
               </Form>
             }
           />
-          <Action title="Reset Conversation" onAction={chatHistoryStore.reset} />
-          <Action title="Restart Nitro" onAction={nitroManager.restart} />
+          <Action
+            title="Reset Conversation"
+            onAction={() => {
+              try {
+                chatHistoryStore.reset();
+              } catch (e) {
+                showToast({ title: JSON.stringify(e) });
+              }
+            }}
+          />
+          <Action
+            title="Restart Nitro"
+            onAction={async () => {
+              confirmAlert({
+                title: "Restart nitro?",
+                message:
+                  "Force restart nitro can result in unintended effect, please make sure you are aware of losing chat history before confirming.",
+                primaryAction: {
+                  title: "Restart",
+                  onAction: () => nitroManager.restart,
+                },
+              });
+            }}
+          />
         </ActionPanel>
       }
     />

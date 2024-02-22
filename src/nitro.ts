@@ -104,6 +104,9 @@ const chatHistoryStore: Store<Chat> & {
     await disposerFactory(chatHistoryStore)();
   },
   reset: () => {
+    // Only reset if ready
+    if (!chatHistoryStore.status.ready.getValue()) throw new Error("History store not ready");
+    // Reset chat history
     chatHistoryStore.subject.next([chatHistoryStore.systemPrompt]);
   },
   requestCompletion: async (msg?: string) => {
@@ -170,14 +173,14 @@ const nitroManager: Store<NitroModelInitOptions> & {
     await setBinPath(path.join(environment.supportPath, "bin"));
     await setLogger(console.log);
     registerEventHandler({
-      /* stylelint-disable-next-line @typescript-eslint/no-unused-vars */
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       close: (code: number, signal: string) => {
         nitroManager.status.ready.next(false);
       },
       disconnect: () => {
         nitroManager.status.ready.next(false);
       },
-      /* stylelint-disable-next-line @typescript-eslint/no-unused-vars */
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       exit: (code: number, signal: string) => {
         nitroManager.status.ready.next(false);
       },
@@ -212,7 +215,13 @@ const nitroManager: Store<NitroModelInitOptions> & {
 };
 
 const useNitro = () => {
-  const [busy, setBusy] = useState(true);
+  // Combined busy status
+  const busy$ = combineLatest([
+    chatConfigStore.status.ready.pipe(shareReplay(1)),
+    chatHistoryStore.status.ready.pipe(shareReplay(1)),
+    nitroManager.status.ready.pipe(shareReplay(1)),
+  ]).pipe(map(([configReady, historyReady, nitroReady]) => !(configReady && historyReady && nitroReady)));
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     // Init storages
@@ -229,18 +238,11 @@ const useNitro = () => {
         // Init nitro
         nitroManager.init,
       );
-
-    // Combine ready statuses
-    const subscription = combineLatest([
-      chatConfigStore.status.ready.pipe(shareReplay(1)),
-      chatHistoryStore.status.ready.pipe(shareReplay(1)),
-      nitroManager.status.ready.pipe(shareReplay(1)),
-    ])
-      .pipe(map(([configReady, historyReady, nitroReady]) => configReady && historyReady && nitroReady))
-      .subscribe((ready) => setBusy(!ready));
+    // Subscribe busy status
+    const sub = busy$.subscribe(setBusy);
 
     return () => {
-      subscription.unsubscribe();
+      sub.unsubscribe();
       nitroManager[Symbol.asyncDispose]();
     };
   }, []);

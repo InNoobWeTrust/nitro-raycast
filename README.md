@@ -2,9 +2,10 @@
 
 [![stability-wip](https://img.shields.io/badge/stability-wip-lightgrey.svg)](https://github.com/mkenney/software-guides/blob/master/STABILITY-BADGES.md#work-in-progress)
 
-![POC screenshot 1](docs/static/img/nitro-raycast-2024-02-05-at-02.32.07.png)
-![POC screenshot 2](docs/static/img/nitro-raycast-2024-02-05-at-02.35.44.png)
-![POC screenshot 3](docs/static/img/nitro-raycast-2024-02-05-at-02.36.09.png)
+![Screenshot 1](docs/static/img/01-nitro-raycast-empty-chat.png)
+![Screenshot 2](docs/static/img/02-nitro-raycast-agents.png)
+![Screenshot 3](docs/static/img/03-nitro-raycast-chat.png)
+![Screenshot 4](docs/static/img/04-nitro-raycast-action-panel.png)
 
 Nitro raycast extension. Using LLM right from Raycast.
 

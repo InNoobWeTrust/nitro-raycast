@@ -1,7 +1,7 @@
 import { runAppleScript } from "@raycast/utils";
 import { LlmUserInfo, Store } from "./types";
-import { BehaviorSubject } from "rxjs";
-import { useEffect } from "react";
+import { BehaviorSubject, shareReplay } from "rxjs";
+import { useEffect, useState } from "react";
 
 const getUserName = async () => {
   const res = await runAppleScript(
