@@ -18,6 +18,17 @@ interface NitroChatConfig {
   context_length: number;
 }
 
+interface LlmModel {
+  source_url: string;
+  id: string;
+  name: string;
+  settings: {
+    ctx_len: number;
+    ngl: number;
+    prompt_template: string;
+  };
+}
+
 type Chat = {
   role: "system" | "assistant" | "user";
   content: string;

@@ -3,6 +3,14 @@ import { LlmUserInfo, Store } from "./types";
 import { BehaviorSubject, shareReplay } from "rxjs";
 import { useEffect, useState } from "react";
 
+const disposerFactory =
+  <T>(store: Store<T>) =>
+  async () => {
+    for await (const sub of Object.values(store.selfSubscription)) {
+      sub.unsubscribe();
+    }
+  };
+
 const getUserName = async () => {
   const res = await runAppleScript(
     `
@@ -61,4 +69,4 @@ const useUserInfo = () => {
   }, []);
 };
 
-export { killNitroProcess, userInfoStore, useUserInfo };
+export { disposerFactory, killNitroProcess, userInfoStore, useUserInfo };

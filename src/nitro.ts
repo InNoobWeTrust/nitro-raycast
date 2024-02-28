@@ -16,24 +16,17 @@ import {
 } from "@janhq/nitro-node";
 import { useEffect, useState } from "react";
 import { Chat, NitroChatConfig, Store } from "./types";
+import { disposerFactory } from "./utils";
 
 const CHAT_STORAGE_KEY = "chat-history";
 const CONFIG_STORAGE_KEY = "nitro-config";
 const BIN_PATH = path.join(environment.supportPath, "bin");
 
-const disposerFactory =
-  <T>(store: Store<T>) =>
-  async () => {
-    for await (const sub of Object.values(store.selfSubscription)) {
-      sub.unsubscribe();
-    }
-  };
-
 const chatConfigStore: Store<NitroChatConfig> & {
   setConfig: (newConfig: Partial<NitroChatConfig>) => void;
 } = {
   subject: new BehaviorSubject<NitroChatConfig>({
-    model: "gpt-3.5-turbo",
+    model: "tinyllama-1.1b",
     max_tokens: 2048,
     stop: [],
     frequency_penalty: 0,
@@ -89,7 +82,8 @@ const chatHistoryStore: Store<Chat> & {
   init: async () => {
     // Init chat history from previous session
     const storedChatJson = await LocalStorage.getItem<string>(CHAT_STORAGE_KEY);
-    const initialChat = storedChatJson ? JSON.parse(storedChatJson) : [chatHistoryStore.systemPrompt];
+    const initialChat =
+      storedChatJson && storedChatJson.trim().length ? JSON.parse(storedChatJson) : [chatHistoryStore.systemPrompt];
     chatHistoryStore.subject.next(initialChat);
     // Store chat history on change
     chatHistoryStore.selfSubscription.autoSave = chatHistoryStore.subject.subscribe({
@@ -105,35 +99,40 @@ const chatHistoryStore: Store<Chat> & {
   },
   reset: () => {
     // Only reset if ready
-    if (!chatHistoryStore.status.ready.getValue()) throw new Error("History store not ready");
+    if (!chatHistoryStore.status.ready.getValue()) throw Error("History store not ready");
+    console.warn("Reset chat history");
+    // Set status not ready before altering chat history
+    chatHistoryStore.status.ready.next(false);
     // Reset chat history
     chatHistoryStore.subject.next([chatHistoryStore.systemPrompt]);
+    // Back to ready
+    chatHistoryStore.status.ready.next(true);
   },
   requestCompletion: async (msg?: string) => {
+    // Wait for ready status
+    await chatHistoryStore.status.ready.pipe(filter(Boolean), first()).toPromise();
+    // Set status not ready before sending request
     chatHistoryStore.status.ready.next(false);
+    const chats = chatHistoryStore.subject.getValue();
     if (msg) {
-      chatHistoryStore.subject.next([
-        ...chatHistoryStore.subject.getValue(),
-        {
-          content: msg,
-          role: "user",
-        },
-      ]);
+      chats.push({
+        content: msg,
+        role: "user",
+      });
+      chatHistoryStore.subject.next(chats);
     }
     try {
       const response = await chatCompletion({
         ...chatConfigStore.subject.getValue(),
-        messages: chatHistoryStore.subject.getValue(),
+        messages: chats,
       });
       const reply = (await response.json()) as { choices: { message: { content: string } }[] };
       console.log(JSON.stringify(reply?.choices?.[0]?.message?.content));
-      chatHistoryStore.subject.next([
-        ...chatHistoryStore.subject.getValue(),
-        {
-          content: reply?.choices?.[0]?.message?.content,
-          role: "assistant",
-        },
-      ]);
+      chats.push({
+        content: reply?.choices?.[0]?.message?.content,
+        role: "assistant",
+      });
+      chatHistoryStore.subject.next(chats);
     } finally {
       chatHistoryStore.status.ready.next(true);
     }

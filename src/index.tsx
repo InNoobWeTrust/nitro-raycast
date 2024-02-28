@@ -62,23 +62,24 @@ export default function Command() {
                   <ActionPanel>
                     <Action.SubmitForm
                       title="Submit"
-                      onSubmit={async (values) => {
+                      onSubmit={(values) => {
                         if (!values.msg.trim().length) {
                           showToast({
                             title: "Please type something before submitting",
                           });
                           return;
                         }
-                        try {
-                          // Request completion
-                          const promise = chatHistoryStore.requestCompletion(values.msg);
-                          // Delay return to avoid button debounce triggering other actions on the main screen
-                          setTimeout(pop, 500);
-                          // Wait for chat completion
-                          await promise;
-                        } catch (e) {
-                          showToast({ title: JSON.stringify(e) });
-                        }
+                        // Delay request for completion until we are back to default view
+                        setTimeout(
+                          () =>
+                            // Request completion and leave it run until complete
+                            chatHistoryStore.requestCompletion(values.msg).catch((e) => {
+                              showToast({ title: JSON.stringify(e) });
+                            }),
+                          250,
+                        );
+                        // Pop out of view
+                        pop();
                       }}
                     />
                   </ActionPanel>
@@ -91,11 +92,22 @@ export default function Command() {
           <Action
             title="Reset Conversation"
             onAction={() => {
-              try {
-                chatHistoryStore.reset();
-              } catch (e) {
-                showToast({ title: JSON.stringify(e) });
-              }
+              confirmAlert({
+                title: "Reset conversation?",
+                message: "You will lose all chat history. Continue?",
+                primaryAction: {
+                  title: "Reset",
+                  onAction: () => {
+                    try {
+                      chatHistoryStore.reset();
+                    } catch (e) {
+                      showToast({
+                        title: JSON.stringify(e),
+                      });
+                    }
+                  },
+                },
+              });
             }}
           />
           <Action
