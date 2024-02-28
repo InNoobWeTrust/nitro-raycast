@@ -11,7 +11,11 @@ const MODELS_PATH = path.join(environment.supportPath, "models");
 const LLM_MODEL_CONFIG_STORAGE_KEY = "llm-model";
 
 const llmModelStore: Store<LlmModel> & {
-  setConfig: (newConfig: Partial<LlmModel>) => Subject<number>;
+  setConfig: (newConfig: Partial<LlmModel>) => Subject<{
+    current: number;
+    total?: number;
+    percent: number;
+  }>;
 } = {
   subject: new BehaviorSubject<LlmModel>({
     source_url: "https://huggingface.co/Qwen/Qwen1.5-0.5B-Chat-GGUF/resolve/main/qwen1_5-0_5b-chat-q2_k.gguf",
@@ -44,7 +48,13 @@ const llmModelStore: Store<LlmModel> & {
   [Symbol.asyncDispose]: async () => {
     await disposerFactory(llmModelStore)();
   },
-  setConfig: (newConfig: Partial<LlmModel>): Subject<number> => {
+  setConfig: (
+    newConfig: Partial<LlmModel>,
+  ): Subject<{
+    current: number;
+    total?: number;
+    percent: number;
+  }> => {
     const mergedConfig = {
       ...llmModelStore.subject.getValue(),
       ...newConfig,
@@ -52,7 +62,11 @@ const llmModelStore: Store<LlmModel> & {
     // Before downloading, set status ready to false
     llmModelStore.status.ready.next(false);
     // Progress report subject
-    const progress$ = new Subject<number>();
+    const progress$ = new Subject<{
+      current: number;
+      total?: number;
+      percent: number;
+    }>();
     // Try to download model if it's not already downloaded
     const _sub = downloader(
       mergedConfig.source_url,
