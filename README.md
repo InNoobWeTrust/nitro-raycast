@@ -24,6 +24,7 @@ Reference for logical flow: [raycast/extensions | Add speedtest #302](https://gi
 - [ ] Let users pick the `prompt_template` on the known list to try on the new model. If they accept the `prompt_template` it will be used.
 - [ ] Let LLM (tiny-llama) helps guessing the best prompt template to use and highlight it to user.
 - [ ] Choice of installation directory and model directory.
+- [ ] Experimenting with [llamafile](https://github.com/Mozilla-Ocho/llamafile) as an alternative to nitro, it supports multiple platforms with ease thanks to [cosmopolitan libc](https://github.com/jart/cosmopolitan), but not as many features as nitro.
 - [ ] Option to use [hugging-chat-api](https://github.com/Soulter/hugging-chat-api) instead of running models locally? Am I going to abuse their servers?!?
 - [ ] Use this experiment as a learning to build standalone apps using Bevy (game engine in Rust) for backend and webview (vanilla JS) for UI. This choice is shamelessly inspired from Samsung's SmartThings mobile app architecture design (don't sue me for knowing too much 🥸 ). Initial choices: [hotkey](https://crates.io/crates/bevy_global_input), [webview binding](https://github.com/Boscop/web-view/blob/master/webview-examples/examples/timer.rs)
 - [x] Be really lazy and summon Llamas to work for me by utilizing Raycast.
