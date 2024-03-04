@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { downloader } from "../src/downloader";
+import { download } from "../src/action/download";
 
 import * as modelCfg from "../assets/models/qwen1_5-0_5b-chat-q2_k.json";
 import { Subject } from "rxjs";
@@ -55,7 +55,7 @@ describe("Can download GGUF model from HuggingFace", () => {
     async () => {
       const cancel$ = new Subject<void>();
       await new Promise<void>((resolve, reject) => {
-        downloader(
+        download(
           modelCfg.source_url,
           path.join(modelDir, modelCfg.source_url.split("/").pop() || `${modelCfg.id}.gguf`),
           cancel$,

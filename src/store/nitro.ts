@@ -2,7 +2,7 @@ import { LocalStorage, environment } from "@raycast/api";
 import path from "node:path";
 import fs from "node:fs/promises";
 import os from "node:os";
-import { BehaviorSubject, Subscription, combineLatest, filter, first, map, shareReplay } from "rxjs";
+import { BehaviorSubject, Subscription, filter, first, shareReplay, timer } from "rxjs";
 
 import {
   initialize,
@@ -14,9 +14,8 @@ import {
   chatCompletion,
   NitroModelInitOptions,
 } from "@janhq/nitro-node";
-import { useEffect, useState } from "react";
-import { Chat, NitroChatConfig, Store } from "./types";
-import { disposerFactory } from "./utils";
+import { Chat, NitroChatConfig, Store } from "../types";
+import { disposerFactory } from "../utils";
 
 const CHAT_STORAGE_KEY = "chat-history";
 const CONFIG_STORAGE_KEY = "nitro-config";
@@ -184,7 +183,8 @@ const nitroManager: Store<NitroModelInitOptions> & {
         nitroManager.status.ready.next(false);
       },
       spawn: () => {
-        nitroManager.status.ready.next(true);
+        // Wait 500ms before setting ready status
+        timer(500).subscribe(() => nitroManager.status.ready.next(true));
       },
     });
     // Monitor nitro and restart if it's not running
@@ -213,40 +213,4 @@ const nitroManager: Store<NitroModelInitOptions> & {
   },
 };
 
-const useNitro = () => {
-  // Combined busy status
-  const busy$ = combineLatest([
-    chatConfigStore.status.ready.pipe(shareReplay(1)),
-    chatHistoryStore.status.ready.pipe(shareReplay(1)),
-    nitroManager.status.ready.pipe(shareReplay(1)),
-  ]).pipe(map(([configReady, historyReady, nitroReady]) => !(configReady && historyReady && nitroReady)));
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    // Init storages
-    Promise.resolve()
-      .then(
-        // Init config
-        chatConfigStore.init,
-      )
-      .then(
-        // Init chat history
-        chatHistoryStore.init,
-      )
-      .then(
-        // Init nitro
-        nitroManager.init,
-      );
-    // Subscribe busy status
-    const sub = busy$.subscribe(setBusy);
-
-    return () => {
-      sub.unsubscribe();
-      nitroManager[Symbol.asyncDispose]();
-    };
-  }, []);
-
-  return { busy };
-};
-
-export { chatConfigStore, chatHistoryStore, nitroManager, useNitro };
+export { chatConfigStore, chatHistoryStore, nitroManager };

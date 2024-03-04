@@ -1,8 +1,7 @@
 import { IncomingMessage } from "node:http";
 import https from "node:https";
 import fs from "node:fs";
-import { Observable, Subject, Subscription, debounceTime, first, tap } from "rxjs";
-import { useEffect, useState } from "react";
+import { Observable, Subject, debounceTime, first, tap } from "rxjs";
 
 /**
  * Observable HTTPS request that follow redirects
@@ -43,7 +42,7 @@ const request = (url: string, cancel$: Subject<void>): Observable<IncomingMessag
       .end();
   });
 
-const downloader = (url: string, dest: string, cancel$: Subject<void>) =>
+const download = (url: string, dest: string, cancel$: Subject<void>) =>
   new Observable<{
     current: number;
     total?: number;
@@ -111,34 +110,4 @@ const downloader = (url: string, dest: string, cancel$: Subject<void>) =>
     });
   });
 
-const useDownloader = () => {
-  const [progress, setProgress] = useState<{
-    current: number;
-    total?: number;
-    percent: number;
-  }>({
-    current: 0,
-    percent: 0,
-  });
-  const cancel$ = new Subject<void>();
-  let sub: Subscription;
-  const download = (url: string, dest: string) => {
-    cancel$.next();
-    sub = downloader(url, dest, cancel$).subscribe(setProgress);
-  };
-
-  useEffect(() => {
-    return () => {
-      cancel$.next();
-      sub?.unsubscribe();
-    };
-  }, []);
-
-  return {
-    download,
-    progress,
-    cancel$,
-  };
-};
-
-export { downloader, useDownloader };
+export { download };

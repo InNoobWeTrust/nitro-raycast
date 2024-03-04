@@ -1,7 +1,7 @@
 import { runAppleScript } from "@raycast/utils";
-import { LlmUserInfo, Store } from "./types";
-import { BehaviorSubject, shareReplay } from "rxjs";
-import { useEffect, useState } from "react";
+import { Store } from "./types";
+import { Subscribable } from "rxjs";
+import { useEffect, useState, useState } from "react";
 
 const disposerFactory =
   <T>(store: Store<T>) =>
@@ -10,6 +10,22 @@ const disposerFactory =
       sub.unsubscribe();
     }
   };
+
+const useSubscribableState = <T>(ob$: Subscribable<T>, initial: T) => {
+  const [state, setState] = useState<T>(initial);
+
+  useEffect(() => {
+    const sub = ob$.subscribe({
+      next: setState,
+    });
+
+    return () => {
+      sub.unsubscribe();
+    };
+  }, []);
+
+  return state;
+};
 
 const getUserName = async () => {
   const res = await runAppleScript(
@@ -37,36 +53,4 @@ const killNitroProcess = async () => {
   return res;
 };
 
-/**
- * Store information about current user
- * May also be used to store memory across chats in the future
- */
-const userInfoStore: Store<LlmUserInfo> = {
-  subject: new BehaviorSubject<LlmUserInfo>({ name: "<Anonymous>" }),
-  status: {
-    ready: new BehaviorSubject(false),
-  },
-  selfSubscription: {},
-  init: async () => {
-    const name = await getUserName();
-    userInfoStore.subject.next({
-      ...userInfoStore.subject.getValue(),
-      name,
-    });
-    userInfoStore.status.ready.next(true);
-  },
-  [Symbol.asyncDispose]: async () => {
-    // Do nothing
-  },
-};
-
-const useUserInfo = () => {
-  useEffect(() => {
-    userInfoStore.init();
-    return () => {
-      userInfoStore[Symbol.asyncDispose]();
-    };
-  }, []);
-};
-
-export { disposerFactory, killNitroProcess, userInfoStore, useUserInfo };
+export { disposerFactory, useSubscribableState, killNitroProcess, getUserName };

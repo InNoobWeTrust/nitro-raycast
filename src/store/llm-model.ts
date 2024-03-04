@@ -1,9 +1,10 @@
 import { LocalStorage, environment } from "@raycast/api";
-import { LlmModel, Store } from "./types";
-import { disposerFactory } from "./utils";
-import { BehaviorSubject, Observable, Subject, Subscription, shareReplay, tap } from "rxjs";
-import { downloader } from "./downloader";
+import { BehaviorSubject, Subject, Subscription, shareReplay } from "rxjs";
 import path from "node:path";
+import { useEffect, useState } from "react";
+import { LlmModel, Store } from "../types";
+import { disposerFactory } from "../utils";
+import { download } from "../action";
 
 const MODEL_CONFIGS_PATH = path.join(environment.assetsPath, "models");
 const MODELS_PATH = path.join(environment.supportPath, "models");
@@ -68,7 +69,7 @@ const llmModelStore: Store<LlmModel> & {
       percent: number;
     }>();
     // Try to download model if it's not already downloaded
-    const _sub = downloader(
+    const _sub = download(
       mergedConfig.source_url,
       path.join(MODELS_PATH, mergedConfig.id),
       new Subject<void>(),
@@ -89,4 +90,21 @@ const llmModelStore: Store<LlmModel> & {
   },
 };
 
-export { llmModelStore };
+const useLlmModel = () => {
+  const [llmModel, setLlmModel] = useState<LlmModel>();
+
+  useEffect(() => {
+    const sub = llmModelStore.subject.pipe(shareReplay(1)).subscribe(setLlmModel);
+    llmModelStore.init();
+    return () => {
+      sub.unsubscribe();
+      llmModelStore[Symbol.asyncDispose]();
+    };
+  }, []);
+
+  return {
+    llmModel,
+  };
+};
+
+export { llmModelStore, useLlmModel };
