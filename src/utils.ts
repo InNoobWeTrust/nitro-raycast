@@ -1,7 +1,7 @@
 import { runAppleScript } from "@raycast/utils";
 import { Store } from "./types";
 import { Subscribable } from "rxjs";
-import { useEffect, useState, useState } from "react";
+import { useEffect, useState } from "react";
 
 const disposerFactory =
   <T>(store: Store<T>) =>
