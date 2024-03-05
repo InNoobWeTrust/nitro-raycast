@@ -12,9 +12,16 @@
   "commands": [
     {
       "name": "index",
-      "title": "Nitro",
-      "subtitle": "Local LLM on Raycast!",
-      "description": "Using nitro, an open-sourced alternative to OpenAI that runs on you local machine.",
+      "title": "Ask LLM",
+      "subtitle": "Nitro",
+      "description": "Simple chat with LLM using nitro, an open-sourced alternative to OpenAI that runs on you local machine.",
+      "mode": "view"
+    },
+    {
+      "name": "llm-model",
+      "title": "Select LLM model",
+      "subtitle": "Nitro",
+      "description": "Select LLM model to run with Nitro",
       "mode": "view"
     }
   ],

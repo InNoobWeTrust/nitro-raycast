@@ -1,6 +1,7 @@
 import { LocalStorage, environment } from "@raycast/api";
-import { BehaviorSubject, Subject, Subscription, shareReplay } from "rxjs";
+import { BehaviorSubject, Subject, Subscription, concat, interval, of, shareReplay } from "rxjs";
 import path from "node:path";
+import fs from "node:fs";
 import { useEffect, useState } from "react";
 import { LlmModel, Store } from "../types";
 import { disposerFactory } from "../utils";
@@ -10,6 +11,86 @@ const MODEL_CONFIGS_PATH = path.join(environment.assetsPath, "models");
 const MODELS_PATH = path.join(environment.supportPath, "models");
 
 const LLM_MODEL_CONFIG_STORAGE_KEY = "llm-model";
+
+const llmModelRegistry: Store<LlmModel[]> & {
+  // Emit errors
+  error$: Subject<Error>;
+  // Allow checking if model is locally downloaded or not
+  modelDownloadedStatus: BehaviorSubject<Record<string, boolean>>;
+} = {
+  subject: new BehaviorSubject<LlmModel[]>([]),
+  status: {
+    ready: new BehaviorSubject(false),
+  },
+  selfSubscription: {
+    autoRefresh: new Subscription(),
+  },
+  error$: new Subject<Error>(),
+  modelDownloadedStatus: new BehaviorSubject<Record<string, boolean>>({}),
+  init: async () => {
+    // Create model dir if not yet exists
+    fs.mkdirSync(MODELS_PATH, { recursive: true });
+
+    // Setup auto refresh
+    llmModelRegistry.selfSubscription.autoRefresh = concat(
+      // Trigger init
+      of(-1),
+      // Refresh every 30 seconds
+      interval(30_000),
+    ).subscribe(async () => {
+      // Set status not ready
+      llmModelRegistry.status.ready.next(false);
+
+      // List directory, filter for json files
+      const jsonFiles = fs
+        .readdirSync(MODEL_CONFIGS_PATH)
+        .map((f) => path.join(MODEL_CONFIGS_PATH, f))
+        .filter((f) => fs.statSync(f).isFile() && f.endsWith(".json"));
+      try {
+        // Get models configs
+        const llmModels = await Promise.all(
+          jsonFiles.map(
+            (f) =>
+              new Promise<string>((resolve, reject) => {
+                fs.readFile(f, { encoding: "utf8", flag: "r" }, (err, data) => {
+                  if (err) reject(err);
+                  else resolve(data);
+                });
+              }),
+          ),
+        ).then((modelsRaw) => modelsRaw.map((m) => JSON.parse(m) as LlmModel));
+
+        // Get downloaded model files
+        const downloadedModels = fs
+          .readdirSync(MODELS_PATH)
+          .filter((f) => fs.statSync(path.join(MODELS_PATH, f)).isFile())
+          .map((f) => f.replace(/\.gguf$/i, ""));
+
+        // Map models with downloaded status
+        llmModelRegistry.modelDownloadedStatus.next(
+          llmModels.reduce(
+            (acc, model) => {
+              acc[model.id] = downloadedModels.includes(model.id);
+              return acc;
+            },
+            {} as Record<string, boolean>,
+          ),
+        );
+        // Update model registry
+        llmModelRegistry.subject.next(llmModels);
+      } catch (e) {
+        // On error, emit
+        llmModelRegistry.error$.next(e as Error);
+      } finally {
+        // Set status ready
+        llmModelRegistry.status.ready.next(true);
+      }
+    });
+  },
+  [Symbol.asyncDispose]: async () => {
+    disposerFactory(llmModelRegistry)();
+  },
+};
 
 const llmModelStore: Store<LlmModel> & {
   setConfig: (newConfig: Partial<LlmModel>) => Subject<{
@@ -107,4 +188,4 @@ const useLlmModel = () => {
   };
 };
 
-export { llmModelStore, useLlmModel };
+export { llmModelRegistry, llmModelStore, useLlmModel };

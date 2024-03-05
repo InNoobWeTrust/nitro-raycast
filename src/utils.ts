@@ -16,7 +16,7 @@ const useSubscribableState = <T>(ob$: Subscribable<T>, initial: T) => {
 
   useEffect(() => {
     const sub = ob$.subscribe({
-      next: setState,
+      next: (v) => setState(v),
     });
 
     return () => {
@@ -25,6 +25,48 @@ const useSubscribableState = <T>(ob$: Subscribable<T>, initial: T) => {
   }, []);
 
   return state;
+};
+
+const toSerializable = (obj: unknown): unknown => JSON.parse(JSON.stringify(obj));
+
+const isFlattened = (obj: Record<string, unknown>): boolean => {
+  const nestedProps = Object.values(obj).map((v) =>
+    typeof v === "object" && !Array.isArray(v) ? Object.values(v as Record<string, unknown>).length : false,
+  );
+  return !nestedProps.some(Boolean);
+};
+
+const flattenProps = (obj: Record<string, unknown>, maxDepth: number = NaN): Record<string, unknown> => {
+  let res = obj;
+  while (!isFlattened(res)) {
+    // Un-nest one level at a time
+    res = Object.entries(res).reduce(
+      (acc, [k, v]) => {
+        // Only un-nest object
+        if (typeof v === "object" && !Array.isArray(v)) {
+          // Un-nest
+          for (const nestedKey in v) {
+            // Assign to new key
+            acc[`${k}.${nestedKey}`] = v[nestedKey as keyof typeof v];
+          }
+        } else {
+          acc[k] = v;
+        }
+        return acc;
+      },
+      {} as Record<string, unknown>,
+    );
+
+    // Check if exceed max-depth
+    if (!Number.isNaN(maxDepth) && maxDepth > 0) {
+      --maxDepth;
+      // Break if maxDepth is exhausted
+      if (!maxDepth) {
+        break;
+      }
+    }
+  }
+  return res;
 };
 
 const getUserName = async () => {
@@ -53,4 +95,12 @@ const killNitroProcess = async () => {
   return res;
 };
 
-export { disposerFactory, useSubscribableState, killNitroProcess, getUserName };
+export {
+  disposerFactory,
+  useSubscribableState,
+  toSerializable,
+  isFlattened,
+  flattenProps,
+  killNitroProcess,
+  getUserName,
+};
