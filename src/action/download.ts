@@ -1,6 +1,7 @@
 import { IncomingMessage } from "node:http";
 import https from "node:https";
 import fs from "node:fs";
+import path from "node:path";
 import { Observable, Subject, debounceTime, first, tap } from "rxjs";
 
 /**
@@ -67,10 +68,12 @@ const download = (url: string, dest: string, cancel$: Subject<void>) =>
       return;
     }
 
-    // File stream
-    const fileStream = fs.createWriteStream(dest);
+    // Create parent directory if it doesn't exist
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    // File stream for partially downloaded file
+    const fileStream = fs.createWriteStream(dest + ".partial");
     // Cleanup on cancel
-    cancel$
+    const sub = cancel$
       .pipe(
         first(),
         // Wait for 100ms before closing file stream
@@ -96,6 +99,8 @@ const download = (url: string, dest: string, cancel$: Subject<void>) =>
         });
         response.on("close", () => {
           fileStream.close();
+          // Move the partial file to the destination
+          fs.renameSync(dest + ".partial", dest);
           subscriber.complete();
         });
         // Pipe downloaded content to file stream
@@ -107,6 +112,7 @@ const download = (url: string, dest: string, cancel$: Subject<void>) =>
         fs.unlink(dest, () => void 0);
         subscriber.error(e);
       },
+      complete: () => sub.unsubscribe(),
     });
   });
 

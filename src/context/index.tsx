@@ -1,14 +1,15 @@
-import { busy$, useNitro } from "../hook/nitro";
+import { useNitro } from "../hook/nitro";
 import { useUserInfo } from "../hook/user-info";
-import { useDownloader } from "../hook/downloader";
+import { useLlmModel, useLlmRegistry } from "../hook/llm-model";
 
 const App = ({ children }: { children: JSX.Element }) => {
   // Initialize the stores
+  useLlmRegistry();
+  useLlmModel();
   useNitro();
   useUserInfo();
-  useDownloader();
 
   return <>{children}</>;
 };
 
-export { App, busy$ };
+export { App };

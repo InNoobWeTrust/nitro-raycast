@@ -7,26 +7,38 @@ interface Store<T> extends AsyncDisposable {
   init: () => Promise<void>;
 }
 
-interface NitroChatConfig {
-  model: string;
-  max_tokens: number;
-  stop: string[];
-  frequency_penalty: number;
-  presence_penalty: number;
-  temperature: number;
-  top_p: number;
-  context_length: number;
-}
-
 interface LlmModel {
-  source_url: string;
+  sources: {
+    filename: string;
+    url: string;
+  }[];
   id: string;
+  object: string;
   name: string;
+  version: string;
+  description: string;
+  format: string;
   settings: {
     ctx_len: number;
     ngl: number;
     prompt_template: string;
+    llama_model_path: string;
   };
+  parameters: {
+    temperature: number;
+    top_p: number;
+    stream: boolean;
+    max_tokens: number;
+    stop: string[];
+    frequency_penalty: number;
+    presence_penalty: number;
+  };
+  metadata: {
+    author: string;
+    tags: string[];
+    size: number;
+  };
+  engine: "nitro" | string;
 }
 
 type Chat = {

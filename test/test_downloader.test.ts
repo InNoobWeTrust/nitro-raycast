@@ -6,7 +6,7 @@ import path from "node:path";
 
 import { download } from "../src/action/download";
 
-import * as modelCfg from "../assets/models/qwen1_5-0_5b-chat-q2_k.json";
+import * as modelCfg from "../assets/models/tinyllama-1.1b.json";
 import { Subject } from "rxjs";
 
 // Cleanup tmp directory that is used during tests
@@ -56,8 +56,8 @@ describe("Can download GGUF model from HuggingFace", () => {
       const cancel$ = new Subject<void>();
       await new Promise<void>((resolve, reject) => {
         download(
-          modelCfg.source_url,
-          path.join(modelDir, modelCfg.source_url.split("/").pop() || `${modelCfg.id}.gguf`),
+          modelCfg.sources[0].url,
+          path.join(modelDir, modelCfg.id, modelCfg.settings.llama_model_path),
           cancel$,
         ).subscribe({
           next: ({ current, total, percent }) => {

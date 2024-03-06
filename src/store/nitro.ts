@@ -1,8 +1,7 @@
 import { LocalStorage, environment } from "@raycast/api";
 import path from "node:path";
 import fs from "node:fs/promises";
-import os from "node:os";
-import { BehaviorSubject, Subscription, filter, first, shareReplay, timer } from "rxjs";
+import { BehaviorSubject, Subscription, filter, first, shareReplay, timer, combineLatest, map } from "rxjs";
 
 import {
   initialize,
@@ -14,53 +13,12 @@ import {
   chatCompletion,
   NitroModelInitOptions,
 } from "@janhq/nitro-node";
-import { Chat, NitroChatConfig, Store } from "../types";
+import { Chat, Store } from "../types";
 import { disposerFactory } from "../utils";
+import { MODELS_PATH, llmModelRegistry, llmModelStore } from "./llm-model";
 
 const CHAT_STORAGE_KEY = "chat-history";
-const CONFIG_STORAGE_KEY = "nitro-config";
 const BIN_PATH = path.join(environment.supportPath, "bin");
-
-const chatConfigStore: Store<NitroChatConfig> & {
-  setConfig: (newConfig: Partial<NitroChatConfig>) => void;
-} = {
-  subject: new BehaviorSubject<NitroChatConfig>({
-    model: "tinyllama-1.1b",
-    max_tokens: 2048,
-    stop: [],
-    frequency_penalty: 0,
-    presence_penalty: 0,
-    temperature: 0.7,
-    top_p: 0.95,
-    context_length: 4096,
-  }),
-  status: {
-    ready: new BehaviorSubject(false),
-  },
-  selfSubscription: {
-    autoSave: new Subscription(),
-  },
-  init: async () => {
-    // Load config
-    const configRaw = await LocalStorage.getItem<string>(CONFIG_STORAGE_KEY);
-    if (configRaw) chatConfigStore.subject.next(JSON.parse(configRaw));
-    // Subscribe to changes in runtime config and save to local storage
-    chatConfigStore.selfSubscription.autoSave = chatConfigStore.subject.subscribe((config) => {
-      LocalStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
-    });
-    // Set status ready
-    chatConfigStore.status.ready.next(true);
-  },
-  [Symbol.asyncDispose]: async () => {
-    await disposerFactory(chatConfigStore)();
-  },
-  setConfig: (newConfig: Partial<NitroChatConfig>) => {
-    chatConfigStore.subject.next({
-      ...chatConfigStore.subject.getValue(),
-      ...newConfig,
-    });
-  },
-};
 
 const chatHistoryStore: Store<Chat> & {
   systemPrompt: { role: "system"; content: string };
@@ -122,7 +80,7 @@ const chatHistoryStore: Store<Chat> & {
     }
     try {
       const response = await chatCompletion({
-        ...chatConfigStore.subject.getValue(),
+        ...llmModelStore.subject.getValue()!.parameters,
         messages: chats,
       });
       const reply = (await response.json()) as { choices: { message: { content: string } }[] };
@@ -138,11 +96,10 @@ const chatHistoryStore: Store<Chat> & {
   },
 };
 
-const nitroManager: Store<NitroModelInitOptions> & {
+const nitroManager: Store<Omit<NitroModelInitOptions, "modelPath">> & {
   restart: () => Promise<void>;
 } = {
-  subject: new BehaviorSubject<NitroModelInitOptions>({
-    modelPath: path.join(os.homedir(), "jan", "models", "tinyllama-1.1b"),
+  subject: new BehaviorSubject<Omit<NitroModelInitOptions, "modelPath">>({
     promptTemplate: "<|system|>\n{system_message}<|user|>\n{prompt}<|assistant|>",
     ctx_len: 50,
     ngl: 32,
@@ -188,14 +145,24 @@ const nitroManager: Store<NitroModelInitOptions> & {
       },
     });
     // Monitor nitro and restart if it's not running
-    nitroManager.selfSubscription.autorestart = nitroManager.status.ready
+    nitroManager.selfSubscription.autorestart = combineLatest(
+      llmModelStore.subject.pipe(shareReplay(1)),
+      llmModelRegistry.modelDownloadedStatus.pipe(shareReplay(1)),
+      nitroManager.status.ready.pipe(shareReplay(1)),
+    )
       .pipe(
-        // Trigger first start
-        shareReplay(1),
+        map(
+          // Ensure everything is ready and model is downloaded
+          ([model, downloadedStatus, ready]) => ({ model, ready, modelReady: model && downloadedStatus[model.id] }),
+        ),
       )
-      .subscribe(async (ready) => {
-        if (!ready) {
-          await runModel(nitroManager.subject.getValue());
+      .subscribe(async ({ model, ready, modelReady }) => {
+        if (!ready && modelReady) {
+          await runModel({
+            ...nitroManager.subject.getValue(),
+            modelPath: path.join(MODELS_PATH, model!.id),
+            ...model?.settings,
+          });
           // Re-evaluate last message if not yet answered
           if (chatHistoryStore.subject.getValue().pop()?.role === "user") {
             await chatHistoryStore.requestCompletion();
@@ -208,9 +175,8 @@ const nitroManager: Store<NitroModelInitOptions> & {
     await disposerFactory(nitroManager)();
     // Kill nitro, which will also set ready status to false
     await killSubprocess();
-    await chatConfigStore[Symbol.asyncDispose]();
     await chatHistoryStore[Symbol.asyncDispose]();
   },
 };
 
-export { chatConfigStore, chatHistoryStore, nitroManager };
+export { chatHistoryStore, nitroManager };

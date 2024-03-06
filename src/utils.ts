@@ -30,8 +30,12 @@ const useSubscribableState = <T>(ob$: Subscribable<T>, initial: T) => {
 const toSerializable = (obj: unknown): unknown => JSON.parse(JSON.stringify(obj));
 
 const isFlattened = (obj: Record<string, unknown>): boolean => {
-  const nestedProps = Object.values(obj).map((v) =>
-    typeof v === "object" && !Array.isArray(v) ? Object.values(v as Record<string, unknown>).length : false,
+  const nestedProps = Object.values(obj).map(
+    (v) =>
+      // If is object
+      (typeof v === "object" && !Array.isArray(v)) ||
+      // Or is array of objects
+      (Array.isArray(v) && v[0] && typeof v[0] === "object"),
   );
   return !nestedProps.some(Boolean);
 };
@@ -43,7 +47,7 @@ const flattenProps = (obj: Record<string, unknown>, maxDepth: number = NaN): Rec
     res = Object.entries(res).reduce(
       (acc, [k, v]) => {
         // Only un-nest object
-        if (typeof v === "object" && !Array.isArray(v)) {
+        if ((typeof v === "object" && !Array.isArray(v)) || (Array.isArray(v) && v[0] && typeof v[0] === "object")) {
           // Un-nest
           for (const nestedKey in v) {
             // Assign to new key
