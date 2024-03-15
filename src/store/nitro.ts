@@ -10,15 +10,32 @@ import {
   registerEventHandler,
   runModel,
   killSubprocess,
-  chatCompletion,
   NitroModelInitOptions,
 } from "@janhq/nitro-node";
 import { Chat, Store } from "../types";
 import { disposerFactory } from "../utils";
 import { MODELS_PATH, llmModelRegistry, llmModelStore } from "./llm-model";
+import OpenAI from "openai";
 
 const CHAT_STORAGE_KEY = "chat-history";
 const BIN_PATH = path.join(environment.supportPath, "bin");
+
+const llmClient: Store<OpenAI> = {
+  subject: new BehaviorSubject<OpenAI>(
+    new OpenAI({
+      apiKey: "",
+      baseURL: "http://127.0.0.1:3928/v1",
+    }),
+  ),
+  status: {},
+  selfSubscription: {},
+  init: async () => {
+    // Do nothing
+  },
+  [Symbol.asyncDispose]: async () => {
+    // Do nothing
+  },
+};
 
 const chatHistoryStore: Store<Chat> & {
   systemPrompt: { role: "system"; content: string };
@@ -79,15 +96,40 @@ const chatHistoryStore: Store<Chat> & {
       chatHistoryStore.subject.next(chats);
     }
     try {
-      const response = await chatCompletion({
-        ...llmModelStore.subject.getValue()!.parameters,
-        messages: chats,
-      });
-      const reply = (await response.json()) as { choices: { message: { content: string } }[] };
-      console.log(JSON.stringify(reply?.choices?.[0]?.message?.content));
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { stream, ...params } = llmModelStore.subject.getValue()!.parameters;
+
+      let reply = "";
+      if (stream) {
+        const response = llmClient.subject.getValue().beta.chat.completions.stream({
+          ...params,
+          model: "gpt-4",
+          messages: chats,
+        });
+        for await (const part of response) {
+          reply += part.choices?.[0]?.delta?.content ?? "";
+          // Stream temporary reply
+          chatHistoryStore.subject.next([
+            ...chats,
+            {
+              role: "assistant",
+              content: reply,
+            },
+          ]);
+        }
+      } else {
+        const response = await llmClient.subject.getValue().chat.completions.create({
+          ...params,
+          model: "gpt-4",
+          messages: chats,
+          stream: false,
+        });
+        reply = response.choices?.[0]!.message?.content ?? "";
+      }
+
       chats.push({
-        content: reply?.choices?.[0]?.message?.content,
         role: "assistant",
+        content: reply,
       });
       chatHistoryStore.subject.next(chats);
     } finally {

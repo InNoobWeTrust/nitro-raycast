@@ -19,7 +19,7 @@
   "parameters": {
     "temperature": 0.7,
     "top_p": 0.95,
-    "stream": false,
+    "stream": true,
     "max_tokens": 2048,
     "stop": [],
     "frequency_penalty": 0,
