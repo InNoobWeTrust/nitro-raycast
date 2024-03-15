@@ -1,6 +1,5 @@
 import { useDownloader } from "../hook/downloader";
-import { useLlmRegistry } from "../hook/llm-model";
-import { useLlmModel } from "../store";
+import { useLlmModel, useLlmRegistry } from "../hook/llm-model";
 
 const ModelSelectionApp = ({ children }: { children: JSX.Element }) => {
   // Initialize the stores

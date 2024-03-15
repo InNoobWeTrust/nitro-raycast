@@ -2,7 +2,7 @@
 
 [![stability-wip](https://img.shields.io/badge/stability-wip-lightgrey.svg)](https://github.com/mkenney/software-guides/blob/master/STABILITY-BADGES.md#work-in-progress)
 
-![Streaming demo](docs/static/video/streaming-demo.mp4)
+![Streaming demo](docs/static/img/streaming-demo.gif)
 ![Screenshot 1](docs/static/img/01-nitro-raycast-empty-chat.png)
 ![Screenshot 2](docs/static/img/02-nitro-raycast-agents.png)
 ![Screenshot 3](docs/static/img/03-nitro-raycast-chat.png)

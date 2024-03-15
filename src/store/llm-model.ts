@@ -171,21 +171,4 @@ const llmModelStore: Store<LlmModel | undefined> & {
   },
 };
 
-const useLlmModel = () => {
-  const [llmModel, setLlmModel] = useState<LlmModel>();
-
-  useEffect(() => {
-    const sub = llmModelStore.subject.pipe(shareReplay(1)).subscribe(setLlmModel);
-    llmModelStore.init();
-    return () => {
-      sub.unsubscribe();
-      llmModelStore[Symbol.asyncDispose]();
-    };
-  }, []);
-
-  return {
-    llmModel,
-  };
-};
-
-export { llmModelRegistry, llmModelStore, useLlmModel, MODEL_CONFIGS_PATH, MODELS_PATH };
+export { llmModelRegistry, llmModelStore, MODEL_CONFIGS_PATH, MODELS_PATH };
