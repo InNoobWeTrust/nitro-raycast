@@ -71,7 +71,7 @@ const download = (url: string, dest: string, cancel$: Subject<void>) =>
     // Create parent directory if it doesn't exist
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     // File stream for partially downloaded file
-    const fileStream = fs.createWriteStream(dest + ".partial");
+    const fileStream = fs.createWriteStream(dest + ".part");
     // Cleanup on cancel
     const sub = cancel$
       .pipe(

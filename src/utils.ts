@@ -88,15 +88,19 @@ const getUserName = async () => {
 };
 
 const killNitroProcess = async () => {
-  const res = await runAppleScript(
-    `
+  try {
+    const res = await runAppleScript(
+      `
       on run argv
         do shell script "pkill nitro"
       end run
     `,
-    [],
-  );
-  return res;
+      [],
+    );
+    return res;
+  } catch (e) {
+    return e;
+  }
 };
 
 export {

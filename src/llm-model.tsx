@@ -120,7 +120,11 @@ export default function Command() {
                         showFailureToast({ title: "Model registry or store not ready. Please try again later." });
                         return;
                       }
-                      await llmModelRegistry.remove(model.id);
+                      try {
+                        await llmModelRegistry.remove(model.id);
+                      } catch (e) {
+                        showFailureToast(e);
+                      }
                     }}
                   />
                 )}
