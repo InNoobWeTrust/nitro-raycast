@@ -33,6 +33,7 @@ Sorry, no exe for you yet...😔
 - [ ] Auto check and update latest release of `nitro` or let user choose the version they want to use.
 - [x] Let users choose models they want to use and download it automatically.
 - [ ] Enhance the response with [wikipedia](https://github.com/dopecodez/wikipedia) based RAG context.
+- [ ] Enhance the response with [cheat.sh](https://cheat.sh/) based RAG context for programming questions.
 - [ ] Let users pick the `prompt_template` on the known list to try on the new model. If they accept the `prompt_template` it will be used.
 - [ ] Let LLM (tiny-llama) helps guessing the best prompt template to use and highlight it to user.
 - [ ] Experimenting with [llamafile](https://github.com/Mozilla-Ocho/llamafile) as an alternative to nitro, it supports multiple platforms with ease thanks to [cosmopolitan libc](https://github.com/jart/cosmopolitan), but not as many features as nitro.
